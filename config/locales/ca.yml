@@ -1,0 +1,10 @@
+---
+ca:
+  layouts:
+    decidim:
+      data_consent:
+        details:
+          items:
+            decidim_frontdoors:
+              description: Recorda que la usuària ha arribat a través d'un enllaç que amaga la navegació d'aquesta pàgina web, perquè les pàgines següents es continuïn mostrant així. S'acaba quan es tanca el navegador.
+              service: Aquesta pàgina web

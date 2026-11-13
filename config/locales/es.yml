@@ -1,0 +1,10 @@
+---
+es:
+  layouts:
+    decidim:
+      data_consent:
+        details:
+          items:
+            decidim_frontdoors:
+              description: Recuerda que la usuaria ha llegado a través de un enlace que oculta la navegación de esta página web, para que las páginas siguientes se sigan mostrando así. Termina cuando se cierra el navegador.
+              service: Esta página web

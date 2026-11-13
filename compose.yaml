@@ -1,0 +1,92 @@
+name: decidim-module-frontdoors
+
+# Everything runs in containers, as the host user (APP_UID and APP_GID in
+# .env), so nothing is installed on the host and files written into this
+# folder belong to you. Versions are pinned: Ruby, Node and Bundler in the
+# Dockerfile, PostgreSQL and Redis below, the gems in Gemfile.lock.
+x-app: &app
+  build:
+    context: .
+    args:
+      APP_UID: ${APP_UID:?Set APP_UID in .env to the output of 'id -u'}
+      APP_GID: ${APP_GID:?Set APP_GID in .env to the output of 'id -g'}
+  image: decidim-module-frontdoors:dev
+  init: true
+  environment:
+    DATABASE_HOST: db
+    DATABASE_PORT: "5432"
+    DATABASE_USERNAME: decidim
+    DATABASE_PASSWORD: decidim
+    REDIS_URL: redis://redis:6379/0
+    # Every command runs in a fresh container, so the Spring preloader the
+    # binstubs would start has nothing to speed up.
+    DISABLE_SPRING: "1"
+    # Decidim's service worker, which production has and development leaves
+    # out. Frontdoors is checked with it on (see README, "Tests"), so the
+    # development application runs with it unless you say otherwise.
+    DECIDIM_SERVICE_WORKER_ENABLED: ${DECIDIM_SERVICE_WORKER_ENABLED:-true}
+  volumes:
+    - .:/app
+    - bundle:/usr/local/bundle
+  depends_on:
+    db:
+      condition: service_healthy
+    redis:
+      condition: service_healthy
+
+services:
+  # For one-off commands: bundle, rake, rspec, rubocop.
+  #   docker compose run --rm app bundle exec rspec
+  app:
+    <<: *app
+    command: ["bash"]
+
+  # The development application (development_app/, made by
+  # `docker compose run --rm app bundle exec rake development_app`),
+  # at http://localhost:3033. Loopback only, on both address families.
+  web:
+    <<: *app
+    working_dir: /app/development_app
+    # A pid file left behind by a killed container would block the next boot.
+    command: ["bash", "-c", "rm -f tmp/pids/server.pid && exec bin/rails server --binding 0.0.0.0 --port 3033"]
+    ports:
+      - "127.0.0.1:3033:3033"
+      - "[::1]:3033:3033"
+    profiles: ["development_app"]
+
+  # The development application sends its email and runs its jobs here.
+  sidekiq:
+    <<: *app
+    working_dir: /app/development_app
+    command: ["bundle", "exec", "sidekiq", "--config", "config/sidekiq.yml"]
+    profiles: ["development_app"]
+
+  # Neither is published on the host. The password is for this throwaway
+  # database only.
+  db:
+    image: postgres:16.15-bookworm
+    environment:
+      POSTGRES_USER: decidim
+      POSTGRES_PASSWORD: decidim
+    volumes:
+      - postgres-data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready --username decidim --dbname postgres"]
+      interval: 5s
+      timeout: 5s
+      retries: 12
+
+  redis:
+    image: redis:7.4.12-bookworm
+    volumes:
+      - redis-data:/data
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 5s
+      timeout: 5s
+      retries: 12
+
+volumes:
+  bundle:
+  postgres-data:
+  redis-data:

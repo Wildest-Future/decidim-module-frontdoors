@@ -1,0 +1,10 @@
+---
+en:
+  layouts:
+    decidim:
+      data_consent:
+        details:
+          items:
+            decidim_frontdoors:
+              description: Remembers that the user arrived through a link that hides this website's navigation, so that the next pages stay that way. It ends when the browser is closed.
+              service: This website

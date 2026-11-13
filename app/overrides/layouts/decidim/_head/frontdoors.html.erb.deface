@@ -1,0 +1,1 @@
+<!-- insert_before "erb[loud]:contains('layouts/decidim/head_extra')" original "1573380893c34669dfbbf12e5116c3f951a7a815" --><% Decidim::Frontdoors.apply(self) %>
