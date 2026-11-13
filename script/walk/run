@@ -1,0 +1,35 @@
+#!/usr/bin/env bash
+#
+# Runs one of the scripts of this folder in headless Chromium, in the
+# Playwright image (its npm package is installed into tmp/playwright the
+# first time). On the host's network, so localhost is the development
+# application. Paths are relative to the repository.
+#
+#   script/walk/run walk.cjs http://localhost:3033 tmp/walk [check numbers]
+#   script/walk/run shots.cjs http://localhost:3033 docs/img
+#
+# The walk logs in as the two accounts Decidim's seeds create, with the
+# password the seeds give them (WALK_PASSWORD, WALK_ADMIN and WALK_USER change
+# them). Each script's own header has the rest.
+set -euo pipefail
+
+cd "$(dirname "$0")/../.."
+
+image=mcr.microsoft.com/playwright:v1.65.0-noble
+mkdir -p tmp/playwright
+
+in_browser_image() {
+  docker run --rm --network host --ipc host --user "$(id -u):$(id -g)" \
+    --env HOME=/out --env NODE_PATH=/out/node_modules --env PLAYWRIGHT_SKIP_BROWSER_DOWNLOAD=1 \
+    --env WALK_PASSWORD --env WALK_ADMIN --env WALK_USER --env WALK_KEEP --env SHOTS_DAY \
+    --volume "$PWD:/repo" --volume "$PWD/tmp/playwright:/out" --workdir /repo \
+    "$image" "$@"
+}
+
+if [ ! -d tmp/playwright/node_modules/playwright ]; then
+  in_browser_image npm install --prefix /out --no-audit --no-fund playwright@1.65.0
+fi
+
+script=$1
+shift
+in_browser_image node "script/walk/$script" "$@"
