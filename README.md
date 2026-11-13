@@ -145,8 +145,8 @@ The module has no page, route, database table, setting, admin screen or script o
 words of its own: "Back" and "Home" are Decidim's, in every language Decidim has. The band's colors are your
 organization's own (its secondary color) and Decidim's white and grey.
 
-Other modules that edit the same template with Deface (decidim-awesome does) are not in its way: each adds its
-own line.
+It has not been run beside decidim-awesome, or beside any other module that edits Decidim's templates with
+Deface (see "What nobody has checked").
 
 ## The cookie
 
@@ -191,9 +191,10 @@ header; the visit goes on behind them and the band is back on the way out.
 - **The service worker's copy of a page.** Decidim installs a script in the visitor's browser (a service worker)
   that keeps a copy of every page for an hour and shows it when the server takes more than 3 seconds to answer
   or the browser is offline. The copy is the page as it was drawn then. So on a slow server or without a network
-  a visitor can be shown a page without navigation outside a visit, or a full one inside it. It happened once
-  while this was being checked, on a development machine that took just over 3 seconds to draw a page; the
-  walk now says so when a step shows such a copy
+  a visitor can be shown a page without navigation outside a visit, or a full one inside it. While this was
+  being checked on a development machine, 2 of the final walk's 512 steps were shown from the copy, and in an
+  earlier run the same step was shown from it in all four browsers, each time when the server took over 3
+  seconds for that page. The walk now says so when a step shows such a copy
   ([the steps and the server's times](docs/walk/2026-11-13-stored-copies.md)).
 - **Idea and meeting pages are as Decidim draws them.** The module changes what is around a page, not the page.
 - **A verification method from another module** keeps its pages in the visit when it registers them with Decidim
@@ -208,7 +209,8 @@ header; the visit goes on behind them and the band is back on the way out.
 **What nobody has checked:** a real phone (the phone checks are a desktop browser at 390 px with touch); a
 screen reader (what it says for "…" was read from the page, not listened to); a language written right to left;
 private spaces; a browser offline during a visit; a live site running this package (demo.gathers.today runs the
-same rule from its own code; the package itself has run in production mode only on a laptop, see "Tests").
+same rule from its own code; the package itself has run in production mode only on a laptop, see "Tests");
+decidim-awesome installed beside it.
 
 ## Tests
 
