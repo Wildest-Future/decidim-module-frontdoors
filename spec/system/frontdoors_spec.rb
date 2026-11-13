@@ -60,6 +60,10 @@ describe "Frontdoors" do
     expect(page).to have_content(space_title)
     expect_decidims_own_page
     expect(our_cookie).to be_nil
+    # The one thing of ours in a page outside a visit: the cookie's row in
+    # Decidim's cookie notice, whose dialog is part of every page.
+    expect(page.html.scan("frontdoor")).to eq(["frontdoor"])
+    expect(page.html).to include("<td>decidim_frontdoors</td>")
 
     visit list_path
 

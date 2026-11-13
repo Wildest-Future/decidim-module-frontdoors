@@ -136,9 +136,10 @@ is copied. If your application has its own `app/views/layouts/decidim/_head_extr
 provides for an application's own head content), it is not touched and keeps working: it is a different file.
 
 On a page opened without the switch and without the module's cookie, the code stops at its first line, and the
-page comes out byte for byte as it does without the module (measured: [the hook](docs/2026-11-13-hook.md)). The
-one thing that differs on every page is the name of Decidim's stylesheet file, which carries a fingerprint of its
-contents, and the module's rules are in that file.
+line adds nothing to the page: not a byte. Such a page differs from the same page without the module in two
+places only, both the module's own: one more row in the table of Decidim's cookie notice, whose dialog is part
+of every page, and the name of Decidim's stylesheet file, which carries a fingerprint of its contents and now
+holds the module's rules. Measured: [the hook](docs/2026-11-13-hook.md).
 
 The module has no page, route, database table, setting, admin screen or script of its own, and the band has no
 words of its own: "Back" and "Home" are Decidim's, in every language Decidim has. The band's colors are your
@@ -192,7 +193,8 @@ header; the visit goes on behind them and the band is back on the way out.
   or the browser is offline. The copy is the page as it was drawn then. So on a slow server or without a network
   a visitor can be shown a page without navigation outside a visit, or a full one inside it. It happened once
   while this was being checked, on a development machine that took just over 3 seconds to draw a page; the
-  walk now says so when a step shows such a copy.
+  walk now says so when a step shows such a copy
+  ([the steps and the server's times](docs/walk/2026-11-13-stored-copies.md)).
 - **Idea and meeting pages are as Decidim draws them.** The module changes what is around a page, not the page.
 - **A verification method from another module** keeps its pages in the visit when it registers them with Decidim
   as the method's engine, which is how Decidim asks for it. Pages it draws elsewhere end the visit.
@@ -205,8 +207,8 @@ header; the visit goes on behind them and the band is back on the way out.
 
 **What nobody has checked:** a real phone (the phone checks are a desktop browser at 390 px with touch); a
 screen reader (what it says for "…" was read from the page, not listened to); a language written right to left;
-private spaces; a browser offline during a visit; a site in production mode other than demo.gathers.today,
-which ran the same rule from its own code, not from this package.
+private spaces; a browser offline during a visit; a live site running this package (demo.gathers.today runs the
+same rule from its own code; the package itself has run in production mode only on a laptop, see "Tests").
 
 ## Tests
 
@@ -231,6 +233,14 @@ docker compose run --rm app bundle exec rubocop
 docker compose run --rm app npm run stylelint
 ```
 
+**In production mode**: the same test application booted as a deployed site is (every class loaded at boot,
+assets compiled with fingerprints), and one page asked for as usual, with `?frontdoor=1`, and with the cookie
+alone. It uses a database of its own and drops it.
+
+```bash
+script/production_check
+```
+
 **The walk**: a scripted browser that goes through fifteen checks at 390 and 1366 px, each in a fresh browser
 and in one that Decidim's service worker controls, and writes every step into a table with its own verdict. It
 runs against the development application, a clean Decidim with seed data at http://localhost:3033:
@@ -246,6 +256,14 @@ script/walk/run walk.cjs http://localhost:3033 tmp/walk
 (liking a proposal) that requires verification. The development application's accounts are the ones
 Decidim's seeds create: `admin@example.org` and `user@example.org`, password `decidim123456789`. After changing
 the stylesheet: `docker compose --profile development_app exec web bin/shakapacker`.
+
+The walk does nothing to avoid the service worker's stored copy of a page (see "Known limits"): when a step is
+shown such a copy, its verdict says so, and names the step the copy was drawn at. A development server is slow
+enough for that to happen. To see the server's response time for each of those steps:
+
+```bash
+docker compose run --rm app ruby script/walk/stored_copies.rb tmp/walk/walk.json development_app/log/development.log
+```
 
 The last walk's table is in [docs/walk](docs/walk/). CI runs RuboCop, stylelint and the specs on every push.
 

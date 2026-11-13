@@ -1,0 +1,46 @@
+#!/usr/bin/env bash
+#
+# Boots the test application (spec/decidim_dummy_app, made by `rake test_app`)
+# in production mode, with its assets compiled as a deploy compiles them, and
+# asks for one page of a process as a visitor would: as usual, with
+# ?frontdoor=1, and then with the cookie alone. The specs and the walk run in
+# test and development mode; this is the one check of what Deface and the
+# stylesheet do when every class is loaded at boot and templates are compiled
+# once.
+#
+#   script/production_check
+#
+# It uses a database of its own (frontdoors_production_check, dropped at the
+# end) and leaves the test application's own databases alone.
+set -euo pipefail
+
+cd "$(dirname "$0")/.."
+
+docker compose run --rm -T --workdir /app/spec/decidim_dummy_app \
+  --env RAILS_ENV=production --env BUNDLE_GEMFILE=/app/Gemfile \
+  --env SECRET_KEY_BASE="$(od -An -tx1 -N64 /dev/urandom | tr -d ' \n')" \
+  --env DATABASE_URL=postgres://decidim:decidim@db:5432/frontdoors_production_check \
+  --env RAILS_LOG_LEVEL=warn \
+  app bash -euo pipefail -c '
+    fail() { echo "FAILED: $1" >&2; tail -n 30 log/production_check.out >&2 || true; exit 1; }
+    trap "kill \$(cat tmp/pids/production_check.pid 2>/dev/null) 2>/dev/null || true; DISABLE_DATABASE_ENVIRONMENT_CHECK=1 bin/rails db:drop >/dev/null 2>&1 || true" EXIT
+    bin/rails db:create db:schema:load >/dev/null
+    bin/rails assets:precompile >/dev/null 2>&1
+    bin/rails runner - >/dev/null <<RUBY
+organization = Decidim::Organization.create!(
+  host: "127.0.0.1", name: { en: "Production check" }, default_locale: "en", available_locales: ["en"],
+  reference_prefix: "PRD", time_zone: "UTC", users_registration_mode: "enabled", badges_enabled: true,
+  send_welcome_notification: false, available_authorizations: [], smtp_settings: {},
+  file_upload_settings: Decidim::OrganizationSettings.default(:upload), tos_version: Time.current
+)
+Decidim::System::CreateDefaultPages.call(organization)
+Decidim::ParticipatoryProcess.create!(
+  organization:, slug: "production-check", title: { en: "Production check" }, subtitle: { en: "A process" },
+  short_description: { en: "<p>One</p>" }, description: { en: "<p>Two</p>" }, published_at: Time.current
+)
+RUBY
+    mkdir -p tmp/pids
+    bin/rails server --binding 127.0.0.1 --port 3044 --pid "$PWD/tmp/pids/production_check.pid" >log/production_check.out 2>&1 &
+    echo "eager loading: $(bin/rails runner "print Rails.application.config.eager_load") (production mode)"
+    ruby /app/script/production_check.rb http://127.0.0.1:3044 || fail "see above"
+  '
