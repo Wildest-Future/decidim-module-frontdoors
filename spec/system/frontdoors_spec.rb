@@ -61,9 +61,12 @@ describe "Frontdoors" do
     expect_decidims_own_page
     expect(our_cookie).to be_nil
     # The one thing of ours in a page outside a visit: the cookie's row in
-    # Decidim's cookie notice, whose dialog is part of every page.
-    expect(page.html.scan("frontdoor")).to eq(["frontdoor"])
+    # Decidim's cookie notice, whose dialog is part of every page. (The
+    # cookie's name is looked for, not the bare word: a test application
+    # generated in a folder named after this repository prints its own name.)
+    expect(page.html.scan("decidim_frontdoors")).to eq(["decidim_frontdoors"])
     expect(page.html).to include("<td>decidim_frontdoors</td>")
+    expect(page.html).not_to match(/class="[^"]*frontdoor/)
 
     visit list_path
 
