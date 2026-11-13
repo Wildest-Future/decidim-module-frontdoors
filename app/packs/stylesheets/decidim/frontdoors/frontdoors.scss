@@ -1,1 +1,236 @@
-// Step 3 moves the band here.
+// Frontdoors (lib/decidim/frontdoors.rb).
+//
+// Every rule here is for a page whose body tag carries "frontdoor", which
+// lib/decidim/frontdoors.rb adds on the server during a visit that began with
+// ?frontdoor=1; a page without it is untouched. The markup is Decidim's own
+// (decidim-core 0.32.2: layouts/decidim/_wrapper, header/_menu and the two
+// breadcrumb templates), and the colors are its theme's: the organization's
+// secondary color and Decidim's own white and grey, by their names in
+// Decidim's theme.
+//
+// Where this lands: config/assets.rb registers the file with Decidim, which
+// puts it at the very end of its own stylesheet (decidim_core), outside every
+// layer. So it comes after all of Decidim's own rules, and before an
+// application's own stylesheet (decidim_application.scss), which can still
+// change anything here.
+//
+// 1. What is gone. display: none, so it is gone for screen readers and
+//    keyboards too.
+// 2. The band: Decidim's breadcrumb bar, restyled from a colored strip to a
+//    thin white one, 48 px tall. A link in it can be pressed over 44 px of
+//    height; what is painted under the pointer, or when the keyboard reaches
+//    it, is a rounded block around its words only.
+// 3. The trail, from 1024 px up. Decidim's template writes a "Home" link by
+//    hand and then its list of crumbs. lib/decidim/frontdoors.rb has cut that
+//    list so that its first crumb is the page one step above the space: Home
+//    is hidden and that first crumb is shown as "…", with its name kept for
+//    screen readers.
+// 4. Under 1024 px Decidim shows one link, the crumb before the last. That
+//    stays, except on the page that starts the trail ("frontdoor-start"):
+//    there the last two crumbs of the trail are shown, the first of them as
+//    "…": "… › this page". They are found by their place from the end of
+//    Decidim's desktop breadcrumb, whose last element is its list for search
+//    engines.
+// 5. A page of a visit outside every space ("frontdoor-back": a log-in page,
+//    a verification page, the terms of service) has one crumb, Decidim's word
+//    "Back", shown as it is at every width.
+// 6. The white column of a two-column page reaches the bottom of the screen.
+
+// A crumb shown as "…". Its own words stay in the page for screen readers.
+@mixin frontdoor-dots {
+  justify-content: center;
+  min-width: 2.75rem;
+
+  > span {
+    @apply sr-only;
+  }
+
+  &::after {
+    content: "\2026";
+  }
+
+  // The same, with nothing for a screen reader to say: it reads the crumb's
+  // real name.
+  @supports (content: "x" / "") {
+    &::after {
+      content: "\2026"/ "";
+    }
+  }
+}
+
+body.frontdoor {
+  // 1. Gone: the main bar (logo, search, language, account, menu), the follow
+  //    button, and everything in the footer except the legal row.
+  #main-bar,
+  .menu-bar__actions,
+  .menu-bar__actions-mobile,
+  footer .main-footer__top,
+  footer .main-footer__down > nav + nav,
+  footer .mini-footer {
+    display: none;
+  }
+
+  // 2. The band.
+  header .menu-bar__container {
+    @apply bg-white;
+
+    height: 3rem;
+  }
+
+  header .menu-bar__breadcrumb-desktop {
+    gap: 0.125rem;
+
+    > * {
+      @apply text-secondary;
+    }
+
+    // The arrows between crumbs (white in Decidim's bar).
+    > span[aria-hidden="true"] {
+      @apply text-gray-2;
+
+      svg {
+        width: 1.25rem;
+        height: 1.25rem;
+        fill: currentcolor;
+      }
+    }
+
+    // The page itself: the last crumb, not a link.
+    .no-interactive {
+      @apply text-gray-2;
+
+      padding-left: 0.5rem;
+      padding-right: 0.5rem;
+    }
+
+    // 3. "Home" and the arrow after it.
+    > a:first-child,
+    > a:first-child + span {
+      display: none;
+    }
+  }
+
+  // The links of the band: every crumb of the trail and Decidim's one link
+  // up. The link itself is 44 px tall and paints nothing. Behind its words
+  // sits a block (Decidim uses the same ::before, 160 px tall, to keep its
+  // old dropdowns open: every one of its measures is set again here) that
+  // takes the color under the pointer and under the keyboard's focus.
+  header
+    .menu-bar__breadcrumb-desktop
+    a.menu-bar__breadcrumb-desktop__dropdown-trigger,
+  header .menu-bar__breadcrumb-mobile a.menu-bar__breadcrumb-item {
+    position: relative;
+    isolation: isolate;
+    align-items: center;
+    min-height: 2.75rem;
+    font-weight: 400;
+    text-decoration: none;
+
+    &::before {
+      content: "";
+      position: absolute;
+      inset: 0.5rem 0;
+      z-index: -1;
+      width: auto;
+      min-width: 0;
+      height: auto;
+      border-radius: 4px;
+      transform: none;
+    }
+
+    &:hover,
+    &:focus-visible {
+      @apply text-white;
+
+      &::before {
+        @apply bg-secondary;
+      }
+    }
+
+    // Decidim's own marks of focus (a white ring from 1024 px up, an outline
+    // below) give way to the block. The outline stays, unseen, for screens
+    // that replace every color with their own.
+    &:focus,
+    &:focus-visible {
+      outline: 2px solid transparent;
+      outline-offset: 0;
+      box-shadow: none;
+    }
+  }
+
+  // The first crumb of the list: "…".
+  @media (min-width: 1024px) {
+    &:not(.frontdoor-back)
+      header
+      .menu-bar__breadcrumb-desktop
+      > a:first-child
+      + span
+      + .menu-bar__breadcrumb-desktop__dropdown-trigger {
+      @include frontdoor-dots;
+    }
+  }
+
+  // 4. Under 1024 px: Decidim's one link up.
+  header .menu-bar__breadcrumb-mobile {
+    .menu-bar__breadcrumb-mobile__dropdown-trigger {
+      @apply text-secondary;
+    }
+
+    .menu-bar__breadcrumb-mobile__label {
+      width: 100%;
+    }
+
+    .menu-bar__breadcrumb-item {
+      flex: 0 1 auto;
+      padding: 0 0.5rem 0 0.25rem;
+    }
+  }
+
+  // On the page that starts the trail: "… › this page".
+  &.frontdoor-start {
+    @media (max-width: 1023.98px) {
+      header .menu-bar__breadcrumb-mobile {
+        display: none;
+      }
+
+      header .menu-bar__breadcrumb-desktop {
+        display: flex;
+
+        > * {
+          display: none;
+        }
+
+        > :nth-last-child(2),
+        > :nth-last-child(3) {
+          display: flex;
+        }
+
+        > :nth-last-child(4) {
+          display: flex;
+
+          @include frontdoor-dots;
+        }
+      }
+    }
+  }
+
+  // 5. Outside every space: one crumb, "Back", at every width.
+  &.frontdoor-back {
+    header .menu-bar__breadcrumb-mobile {
+      display: none;
+    }
+
+    header .menu-bar__breadcrumb-desktop {
+      display: flex;
+    }
+  }
+
+  // 6. Decidim paints the left half of a two-column page grey behind the
+  //    columns, as tall as the content area, and sizes the columns' row to
+  //    its content. Without Decidim's header and footer a short page no
+  //    longer fills the screen, and the grey showed under the white column.
+  //    Let the row take the height that is left.
+  .layout-2col {
+    grid-auto-rows: auto;
+  }
+}
